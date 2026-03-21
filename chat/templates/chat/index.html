@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IncognitoChat - Anonymous Real-Time Chat Platform">
+    <title>IncognitoChat</title>
+    <link rel="stylesheet" href="{% static 'chat/styles.css' %}">
+</head>
+<body>
+    <!-- Landing & Connection Screen -->
+    <div id="landing-screen" class="screen active">
+        <div class="landing-content">
+            <h1 class="headline">IncognitoChat: Instant, Anonymous Connections.</h1>
+            <p class="platform-overview">A secure, account-free space to talk. No logins, no tracking, and no chat history saved. Just real-time conversation.</p>
+            
+            <div class="rules-card">
+                <span class="rules-title">Zero Tolerance Policy:</span>
+                <p class="rules-text">Harassment, spam, or abusive language will result in an immediate ban. Keep it respectful.</p>
+            </div>
+
+            <div class="landing-actions" id="landing-actions">
+                <button id="decline-btn" class="btn ghost-btn">Decline & Leave</button>
+                <button id="start-chat-btn" class="btn primary-btn glow-btn shadow-round">I Agree — Start Chatting</button>
+            </div>
+            
+            <div id="msg-declined" class="hidden" style="margin-top: 1rem; color: var(--text-muted);">
+                You declined the rules. Please close this tab.
+            </div>
+
+            <div id="loading-state" class="hidden">
+                <div class="spinner"></div>
+                <p>Looking for a new stranger...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Chat Interface -->
+    <div id="chat-screen" class="screen hidden">
+        <header class="chat-header">
+            <div class="status-indicator">
+                <span class="dot green-dot"></span>
+                <span class="status-text">Connected to Stranger</span>
+            </div>
+            <button id="disconnect-btn" class="btn outline-red-btn">Disconnect</button>
+        </header>
+
+        <main id="chat-area" class="chat-area">
+            <!-- Messages will be injected here via JS -->
+        </main>
+
+        <footer class="chat-footer">
+            <div id="input-container" class="input-pill">
+                <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                <button id="send-btn" class="pill-send-btn" aria-label="Send Message">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="send-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+            <button id="find-new-btn" class="btn primary-btn full-width hidden" style="max-width: 800px; margin: 0 auto; border-radius: 50px;">Find a new stranger.</button>
+        </footer>
+    </div>
+
+    <!-- Report Modal Overlay -->
+    <div id="report-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h2>Report this user?</h2>
+            <form id="report-form" class="report-options">
+                <label class="radio-label">
+                    <input type="radio" name="report-reason" value="spam" checked>
+                    <span class="custom-radio"></span>
+                    Spam
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="report-reason" value="offensive">
+                    <span class="custom-radio"></span>
+                    Offensive Language
+                </label>
+            </form>
+            <div class="modal-actions">
+                <button id="cancel-report-btn" class="btn grey-btn">Cancel</button>
+                <button id="submit-report-btn" class="btn solid-red-btn">Submit & Block</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'chat/script.js' %}"></script>
+</body>
+</html>
