@@ -8,12 +8,13 @@
     <title>IncognitoChat</title>
     <link rel="stylesheet" href="{% static 'chat/styles.css' %}">
     <style>
-        /* Game Styles added for the copy project */
+        /* Game Styles */
         .game-overlay {
-            background: rgba(26, 26, 26, 0.9);
+            background: rgba(26, 26, 26, 0.95);
             border-bottom: 2px solid #333;
             padding: 10px;
             text-align: center;
+            z-index: 10;
         }
         .game-grid {
             display: grid;
@@ -36,6 +37,28 @@
         }
         .cell:hover { background: #333; }
         .game-status { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 600px) {
+            .game-grid {
+                grid-template-columns: repeat(3, 40px); /* Smaller grid for mobile */
+                gap: 4px;
+            }
+            .cell {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+            .chat-area {
+                /* Dynamically adjust height when game is visible */
+                flex: 1;
+                max-height: calc(100vh - 280px); 
+            }
+            .headline { font-size: 1.5rem; }
+            .platform-overview { font-size: 0.85rem; }
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -65,15 +88,15 @@
         </div>
     </div>
 
-    <div id="chat-screen" class="screen hidden">
+    <div id="chat-screen" class="screen hidden" style="display: flex; flex-direction: column; height: 100vh;">
         <header class="chat-header">
             <div class="status-indicator">
                 <span class="dot green-dot"></span>
                 <span class="status-text">Connected to Stranger</span>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button id="toggle-game-btn" class="btn ghost-btn" style="padding: 5px 10px; font-size: 0.7rem;">🎮 Game</button>
-                <button id="disconnect-btn" class="btn outline-red-btn">Disconnect</button>
+            <div style="display: flex; gap: 8px;">
+                <button id="toggle-game-btn" class="btn ghost-btn" style="padding: 4px 8px; font-size: 0.7rem;">🎮 Game</button>
+                <button id="disconnect-btn" class="btn outline-red-btn" style="padding: 4px 8px; font-size: 0.7rem;">Quit</button>
             </div>
         </header>
 
@@ -92,7 +115,7 @@
             </div>
         </div>
 
-        <main id="chat-area" class="chat-area">
+        <main id="chat-area" class="chat-area" style="flex: 1; overflow-y: auto; padding: 15px;">
             </main>
 
         <footer class="chat-footer">
