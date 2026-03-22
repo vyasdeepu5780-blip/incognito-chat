@@ -7,9 +7,38 @@
     <meta name="description" content="IncognitoChat - Anonymous Real-Time Chat Platform">
     <title>IncognitoChat</title>
     <link rel="stylesheet" href="{% static 'chat/styles.css' %}">
+    <style>
+        /* Game Styles added for the copy project */
+        .game-overlay {
+            background: rgba(26, 26, 26, 0.9);
+            border-bottom: 2px solid #333;
+            padding: 10px;
+            text-align: center;
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            gap: 5px;
+            justify-content: center;
+            margin: 10px auto;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            background: #222;
+            border: 1px solid #00d2ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #00d2ff;
+            cursor: pointer;
+        }
+        .cell:hover { background: #333; }
+        .game-status { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+    </style>
 </head>
 <body>
-    <!-- Landing & Connection Screen -->
     <div id="landing-screen" class="screen active">
         <div class="landing-content">
             <h1 class="headline">IncognitoChat: Instant, Anonymous Connections.</h1>
@@ -36,19 +65,35 @@
         </div>
     </div>
 
-    <!-- Active Chat Interface -->
     <div id="chat-screen" class="screen hidden">
         <header class="chat-header">
             <div class="status-indicator">
                 <span class="dot green-dot"></span>
                 <span class="status-text">Connected to Stranger</span>
             </div>
-            <button id="disconnect-btn" class="btn outline-red-btn">Disconnect</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="toggle-game-btn" class="btn ghost-btn" style="padding: 5px 10px; font-size: 0.7rem;">🎮 Game</button>
+                <button id="disconnect-btn" class="btn outline-red-btn">Disconnect</button>
+            </div>
         </header>
 
+        <div id="game-section" class="game-overlay hidden">
+            <div id="game-status" class="game-status">Game Started</div>
+            <div class="game-grid">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+        </div>
+
         <main id="chat-area" class="chat-area">
-            <!-- Messages will be injected here via JS -->
-        </main>
+            </main>
 
         <footer class="chat-footer">
             <div id="input-container" class="input-pill">
@@ -61,21 +106,12 @@
         </footer>
     </div>
 
-    <!-- Report Modal Overlay -->
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-card">
             <h2>Report this user?</h2>
             <form id="report-form" class="report-options">
-                <label class="radio-label">
-                    <input type="radio" name="report-reason" value="spam" checked>
-                    <span class="custom-radio"></span>
-                    Spam
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="report-reason" value="offensive">
-                    <span class="custom-radio"></span>
-                    Offensive Language
-                </label>
+                <label class="radio-label"><input type="radio" name="report-reason" value="spam" checked> Spam</label>
+                <label class="radio-label"><input type="radio" name="report-reason" value="offensive"> Offensive Language</label>
             </form>
             <div class="modal-actions">
                 <button id="cancel-report-btn" class="btn grey-btn">Cancel</button>

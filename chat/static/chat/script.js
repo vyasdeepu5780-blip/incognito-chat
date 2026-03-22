@@ -28,6 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let chatSocket = null;
     let isConnected = false;
 
+    // --- Tic-Tac-Toe Variables ---
+    const gameSection = document.getElementById('game-section');
+    const toggleGameBtn = document.getElementById('toggle-game-btn');
+    const cells = document.querySelectorAll('.cell');
+    const gameStatus = document.getElementById('game-status');
+    
+    let mySymbol = null; // Will be 'X' or 'O' assigned by server
+    let currentTurn = 'X';
+    let boardState = Array(9).fill(null);
+    let gameActive = false;
+    const winningConditions = [ [0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6] ];
+
     // --- State Transitions ---
 
     declineBtn.addEventListener('click', () => {
@@ -39,21 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
         landingActions.classList.add('hidden');
         loadingState.classList.remove('hidden');
 
-        // Allow UI to fade, then connect
         setTimeout(() => {
             landingScreen.style.opacity = '0';
             setTimeout(() => {
                 landingScreen.classList.add('hidden');
                 chatScreen.classList.remove('hidden');
                 chatScreen.style.opacity = '1';
-                
                 chatArea.innerHTML = '';
-                connectWebSocket(); // Start the real-time connection
-            }, 400); // Wait for fade out
+                connectWebSocket(); 
+            }, 400);
         }, 800);
     });
 
     disconnectBtn.addEventListener('click', handleDisconnect);
+
     findNewBtn.addEventListener('click', () => {
         findNewBtn.classList.add('hidden');
         inputContainer.classList.remove('hidden');
@@ -61,22 +72,19 @@ document.addEventListener('DOMContentLoaded', () => {
         messageInput.value = '';
         messageInput.disabled = false;
         sendBtn.disabled = false;
-        
         chatArea.innerHTML = '';
-        
         statusDot.classList.remove('green-dot');
         statusDot.style.backgroundColor = '#888';
         statusText.textContent = "Connecting...";
-        
         disconnectBtn.disabled = true;
-
+        resetGame();
         connectWebSocket();
     });
 
+    // --- WebSocket Connection ---
+
     function connectWebSocket() {
-        if (chatSocket) {
-            chatSocket.close();
-        }
+        if (chatSocket) chatSocket.close();
 
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         chatSocket = new WebSocket(protocol + window.location.host + '/ws/chat/');
@@ -92,105 +100,132 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusText.textContent = "Connected to Stranger";
                     isConnected = true;
                     disconnectBtn.disabled = false;
+                    
+                    // Assign roles (X for first player, O for second)
+                    mySymbol = data.role; 
+                    gameActive = true;
+                    resetGame();
+                    updateGameStatus();
                 } else if (data.status === 'disconnected') {
                     handleStrangerDisconnect();
                 } else if (data.status === 'waiting') {
-                    statusDot.classList.remove('green-dot');
-                    statusDot.style.backgroundColor = '#888';
                     statusText.textContent = "Looking for someone...";
                     isConnected = false;
+                    gameSection.classList.add('hidden');
                 }
             } else if (data.type === 'chat_message') {
                 if (!data.is_me) {
                     appendIncomingMessage(data.message);
                 }
+            } else if (data.type === 'game_move') {
+                handleIncomingMove(data.index, data.symbol);
             }
         };
 
-        chatSocket.onclose = function(e) {
-            console.log('Chat socket closed');
-            if (isConnected) {
-                handleDisconnect();
-            }
-        };
+        chatSocket.onclose = () => { if (isConnected) handleDisconnect(); };
     }
+
+    // --- Tic-Tac-Toe Actions ---
+
+    toggleGameBtn.addEventListener('click', () => {
+        gameSection.classList.toggle('hidden');
+    });
+
+    cells.forEach(cell => {
+        cell.addEventListener('click', () => {
+            const index = cell.getAttribute('data-index');
+            // Only allow move if it's your turn, game is active, and cell is empty
+            if (!gameActive || currentTurn !== mySymbol || boardState[index] !== null) return;
+            
+            chatSocket.send(JSON.stringify({
+                'type': 'game_move',
+                'index': parseInt(index),
+                'symbol': mySymbol
+            }));
+        });
+    });
+
+    function handleIncomingMove(index, symbol) {
+        boardState[index] = symbol;
+        const cell = document.querySelector(`.cell[data-index="${index}"]`);
+        if (cell) {
+            cell.textContent = symbol;
+            cell.style.color = symbol === 'X' ? '#00d2ff' : '#ff4b2b';
+        }
+        
+        if (checkWin(symbol)) {
+            gameActive = false;
+            gameStatus.textContent = symbol === mySymbol ? "🏆 You win!" : "💀 Stranger wins!";
+            setTimeout(() => { if(isConnected) { resetGame(); gameActive = true; updateGameStatus(); } }, 4000);
+        } else if (!boardState.includes(null)) {
+            gameActive = false;
+            gameStatus.textContent = "🤝 It's a draw!";
+            setTimeout(() => { if(isConnected) { resetGame(); gameActive = true; updateGameStatus(); } }, 4000);
+        } else {
+            currentTurn = symbol === 'X' ? 'O' : 'X';
+            updateGameStatus();
+        }
+    }
+
+    function updateGameStatus() {
+        if (!gameActive) return;
+        gameStatus.textContent = currentTurn === mySymbol ? `Your turn (${mySymbol})` : `Stranger's turn (${currentTurn})`;
+    }
+
+    function checkWin(symbol) {
+        return winningConditions.some(cond => cond.every(idx => boardState[idx] === symbol));
+    }
+
+    function resetGame() {
+        boardState = Array(9).fill(null);
+        currentTurn = 'X';
+        cells.forEach(cell => { cell.textContent = ''; });
+        updateGameStatus();
+    }
+
+    // --- Standard Chat Functions ---
 
     function handleDisconnect() {
         isConnected = false;
         if (chatSocket) chatSocket.close();
-        
         inputContainer.classList.add('hidden');
-        messageInput.disabled = true;
-        sendBtn.disabled = true;
-        
         addSystemMessage("You have disconnected.");
-        
-        statusDot.classList.remove('green-dot');
         statusDot.style.backgroundColor = 'var(--text-muted)';
         statusText.textContent = "Disconnected";
-        
         findNewBtn.classList.remove('hidden');
+        gameActive = false;
     }
     
     function handleStrangerDisconnect() {
         if(!isConnected) return;
         isConnected = false;
         if (chatSocket) chatSocket.close();
-        
         inputContainer.classList.add('hidden');
-        messageInput.disabled = true;
-        sendBtn.disabled = true;
-        
-        statusDot.classList.remove('green-dot');
-        statusDot.style.backgroundColor = 'var(--text-muted)';
-        statusText.textContent = "Disconnected";
-        
+        statusText.textContent = "Stranger Disconnected";
         findNewBtn.classList.remove('hidden');
+        gameActive = false;
     }
-
-    // --- Messaging ---
 
     function sendMessage() {
         const text = messageInput.value.trim();
         if (text === '' || !isConnected || !chatSocket) return;
-
-        // Add user message locally
         const messageEl = document.createElement('div');
         messageEl.className = 'message-wrapper outgoing';
         messageEl.innerHTML = `<div class="message message-outgoing">${escapeHTML(text)}</div>`;
         chatArea.appendChild(messageEl);
-
         messageInput.value = '';
         scrollToBottom();
-
-        // Send over WebSocket
-        chatSocket.send(JSON.stringify({
-            'message': text
-        }));
+        chatSocket.send(JSON.stringify({ 'message': text }));
     }
 
     sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
     function appendIncomingMessage(text) {
         const wrapper = document.createElement('div');
         wrapper.className = 'message-wrapper incoming';
-        
-        const innerHTML = `
-            <div class="message message-incoming">
-                ${escapeHTML(text)}
-                <span class="flag-icon" title="Report message">&#9873;</span>
-            </div>
-        `;
-        wrapper.innerHTML = innerHTML;
-        
-        const flagIcon = wrapper.querySelector('.flag-icon');
-        flagIcon.addEventListener('click', openReportModal);
-
+        wrapper.innerHTML = `<div class="message message-incoming">${escapeHTML(text)}<span class="flag-icon" title="Report">&#9873;</span></div>`;
+        wrapper.querySelector('.flag-icon').addEventListener('click', openReportModal);
         chatArea.appendChild(wrapper);
         scrollToBottom();
     }
@@ -203,57 +238,17 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
-    // --- Moderation UI ---
-    let reportedMessageNodeRow = null;
-
-    function openReportModal(e) {
-        reportedMessageNodeRow = e.target.closest('.message-wrapper');
-        reportModal.classList.remove('hidden');
-    }
-
-    function closeReportModal() {
-        reportModal.classList.add('hidden');
-        reportedMessageNodeRow = null;
-    }
-
+    function openReportModal(e) { reportModal.classList.remove('hidden'); }
+    function closeReportModal() { reportModal.classList.add('hidden'); }
     cancelReportBtn.addEventListener('click', closeReportModal);
-    
-    reportModal.addEventListener('click', (e) => {
-        if(e.target === reportModal) closeReportModal();
+    submitReportBtn.addEventListener('click', () => { 
+        closeReportModal(); 
+        handleDisconnect();
+        addSystemMessage("You blocked the stranger.");
     });
 
-    submitReportBtn.addEventListener('click', () => {
-        closeReportModal();
-        if(reportedMessageNodeRow && reportedMessageNodeRow.parentNode) {
-            const msgEl = reportedMessageNodeRow.querySelector('.message');
-            if(msgEl) {
-                msgEl.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Message removed by moderation system.</span>';
-                msgEl.style.backgroundColor = 'transparent';
-                msgEl.style.border = '1px dashed var(--text-muted)';
-                const flag = msgEl.querySelector('.flag-icon');
-                if (flag) flag.remove();
-            }
-        }
-        
-        setTimeout(() => {
-            handleDisconnect();
-            addSystemMessage("You blocked the stranger and disconnected.");
-        }, 500);
-    });
-
-    // --- Helpers ---
-
-    function scrollToBottom() {
-        chatArea.scrollTop = chatArea.scrollHeight;
-    }
-
+    function scrollToBottom() { chatArea.scrollTop = chatArea.scrollHeight; }
     function escapeHTML(str) {
-        return str.replace(/[&<>'"]/g, tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag]));
+        return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
     }
 });
